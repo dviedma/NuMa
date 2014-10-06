@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/Numa.iml" filepath="$PROJECT_DIR$/Numa.iml" />
+      <module fileurl="file://$PROJECT_DIR$/NuMa.iml" filepath="$PROJECT_DIR$/NuMa.iml" />
     </modules>
   </component>
 </project>
