@@ -87,6 +87,7 @@ function compareMatrices(imgDataMatrix) {
   return comparisonMatrices;
 }
 
+
 function make_base()
 {
   base_image = new Image();
