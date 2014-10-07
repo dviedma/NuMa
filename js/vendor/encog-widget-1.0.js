@@ -1,31 +1,5 @@
-ENCOG.namespace("ENCOG.GUI.Console");
 ENCOG.namespace("ENCOG.GUI.CellGrid");
 ENCOG.namespace("ENCOG.GUI.Drawing");
-
-ENCOG.GUI.Console = function() {};
-ENCOG.GUI.Console.prototype = {
-  consoleDiv: {},
-  textarea: {},
-  name: "Console",
-  write: function(a) {
-    this.textarea.value += (a);
-    this.textarea.scrollTop = this.textarea.scrollHeight
-  },
-  writeLine: function(a) {
-    this.textarea.value += (a + "\n");
-    this.textarea.scrollTop = this.textarea.scrollHeight
-  },
-  clear: function() {
-    this.textarea.value = ""
-  }
-};
-ENCOG.GUI.Console.create = function(b) {
-  var a = new ENCOG.GUI.Console();
-  a.consoleDiv = document.getElementById(b);
-  a.consoleDiv.innerHTML = "<textarea></textarea>";
-  a.textarea = a.consoleDiv.getElementsByTagName("textarea")[0];
-  return a
-};
 
 
 /**
@@ -292,37 +266,44 @@ ENCOG.GUI.Drawing.prototype = {
     return true
   },
   performDownSample: function() {
-    var m, a, e, o, f, k, r, p, q, c, h, n, l, j, g, b;
+    var m, a, e, o, sw, sh, resultArray, p, q, c, h, sx, sy, j, g, b;
+
     m = 0;
     while (this.isHLineClear(m) && m < this.canvas.height) {
       m++
     }
+
     a = this.canvas.height;
     while (this.isHLineClear(a) && a > 0) {
       a--
     }
+
     e = 0;
     while (this.isVLineClear(e) && e < this.canvas.width) {
       e++
     }
+
     o = this.canvas.width;
     while (this.isVLineClear(o) && o > 0) {
       o--
     }
+
     if (a < m) {
-      r = ENCOG.ArrayUtil.allocate1D(this.downsampleHeight * this.downsampleWidth);
-      ENCOG.ArrayUtil.fillArray(r, 0, r.length, -1);
-      return r
+      resultArray = ENCOG.ArrayUtil.allocate1D(this.downsampleHeight * this.downsampleWidth);
+      ENCOG.ArrayUtil.fillArray(resultArray, 0, resultArray.length, -1);
+      return resultArray
     }
-    f = (o - e) / this.downsampleWidth;
-    k = (a - m) / this.downsampleHeight;
-    r = new Array();
+
+    sw = (o - e) / this.downsampleWidth;
+    sh = (a - m) / this.downsampleHeight;
+    resultArray = new Array();
     p = 0;
+
     for (q = 0; q < this.downsampleHeight; q++) {
       for (c = 0; c < this.downsampleWidth; c++) {
-        n = (f * c) + e;
-        l = (k * q) + m;
-        b = this.drawingContext.getImageData(n, l, f, k);
+        sx = (sw * c) + e;
+        sy = (sh * q) + m;
+        b = this.drawingContext.getImageData(sx, sy, sw, sh);
         h = b.data;
         j = false;
         for (g = 0; g < h.length; g++) {
@@ -332,13 +313,13 @@ ENCOG.GUI.Drawing.prototype = {
           }
         }
         if (j) {
-          r[p++] = 1
+          resultArray[p++] = 1
         } else {
-          r[p++] = -1
+          resultArray[p++] = -1
         }
       }
     }
-    return r
+    return resultArray
   },
   clear: function() {
     this.canvas.width = this.canvas.width

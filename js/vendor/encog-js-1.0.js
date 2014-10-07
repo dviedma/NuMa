@@ -19,23 +19,30 @@ ENCOG.namespace = function(b) {
   return d
 };
 
+
+/**
+ * Array Utils
+ */
 ENCOG.namespace("ENCOG.ArrayUtil");
 
 ENCOG.ArrayUtil = function() {};
-ENCOG.ArrayUtil.fillArray = function(a, e, d, b) {
-  var c;
-  for (c = e; c < d; c += 1) {
-    a[c] = b
+
+ENCOG.ArrayUtil.fillArray = function(array, startIndex, endIndex, value) {
+  var i;
+  for (i = startIndex; i < endIndex; i += 1) {
+    array[i] = value;
   }
 };
 
-ENCOG.ArrayUtil.allocate1D = function(b) {
-  var c, a;
-  a = [];
-  for (c = 0; c < b; c += 1) {
-    a[c] = 0
+ENCOG.ArrayUtil.allocate1D = function(arraySize) {
+  var i,
+      array;
+
+  array = [];
+  for (i = 0; i < arraySize; i += 1) {
+    array[i] = 0
   }
-  return a
+  return array;
 };
 
 
