@@ -1,110 +1,214 @@
-var canvas = document.getElementById('viewport'),
-    ctx = canvas.getContext('2d'),
-    imgWidth = 18,
-    imgHeight = 20,
-    imgData,
-    imgDataBW,
-    imgDataSerialized = [],  //[0, 1, 0, 1, 1, 1, 0 , 0]
-    imgDataMatrix = [],
-    comparisonMatricesArray = [],
-    estimatedNumber = 0;
+if(window.addEventListener) {
+  window.addEventListener('load', function () {
 
-make_base();
+    var DOWNSAMPLE_WIDTH = 5;
+    var DOWNSAMPLE_HEIGHT = 8;
 
-/**
- * Convert to B/W
- * @param imgData
- * @returns {*}
- */
-function convertToBW(imgData) {
-  var j = 0;
-  for (var i=0;i<imgData.data.length;i+=4)
-  {
-    if((imgData.data[i] + imgData.data[i+1] + imgData.data[i+2])/3 < 250) {
-      imgData.data[i]=0;
-      imgData.data[i+1]=0;
-      imgData.data[i+2]=0;
+    var lstLetters, downsampleArea;
+    var charData = {};
+    var drawingArea;
+    var downSampleData = [];
 
-      imgDataSerialized.push(1);
-    } else {
-      imgData.data[i]=255;
-      imgData.data[i+1]=255;
-      imgData.data[i+2]=255;
+    function init () {
+      // Find the canvas element.
+      drawingArea = ENCOG.GUI.Drawing.create('drawing-area',300,300);
+      downsampleArea = ENCOG.GUI.CellGrid.create('downsampleView',DOWNSAMPLE_WIDTH,DOWNSAMPLE_HEIGHT,110,120);
 
-      imgDataSerialized.push(0);
-    }
-    imgData.data[i+3]=255;
-  }
-  return imgData;
-}
+      downsampleArea.outline = true;
+      downsampleArea.mouseDown = function(x,y) {};
 
-/**
- * List to matrix function
- * @param list
- * @param elementsPerSubArray
- * @returns {Array}
- */
-function listToMatrix(list, elementsPerSubArray) {
-  var matrix = [], i, k;
+      downsampleArea.determineColor = function(row,col) {
+        var index = (row*this.gridWidth)+col;
+        if( downSampleData[index] < 0 )   {
+          return "white";
+        }
+        else {
+          return "black";
+        }
+      };
 
-  for (i = 0, k = -1; i < list.length; i++) {
-    if (i % elementsPerSubArray === 0) {
-      k++;
-      matrix[k] = [];
+      lstLetters = document.getElementById('lstLetters');
+
+      lstLetters.addEventListener('change', ev_selectList, true);
+
+      var btnClear = document.getElementById('btnClear');
+      var btnDownsample = document.getElementById('btnDownsample');
+      var btnRecognize = document.getElementById('btnRecognize');
+      var btnTeach = document.getElementById('btnTeach');
+      var btnRemove = document.getElementById('btnRemove');
+
+      btnClear.addEventListener('click', ev_clear, false);
+      btnDownsample.addEventListener('click', ev_downSample, false);
+      btnRecognize.addEventListener('click', ev_recognize, false);
+      btnTeach.addEventListener('click', ev_teach, false);
+      btnRemove.addEventListener('click', ev_remove, false);
+
+      downSampleData = drawingArea.performDownSample();
+      displaySample(downSampleData);
+      preload();
     }
 
-    matrix[k].push(list[i]);
-  }
+    /////////////////////////////////////////////////////////////////////////////
+    // Event functions
+    /////////////////////////////////////////////////////////////////////////////
 
-  return matrix;
-}
+    // Called when the "Teach" button is clicked.
+    function ev_teach(ev)
+    {
+      var data = drawingArea.performDownSample();
+      displaySample(data);
 
-/**
- * Compare matrices
- */
-function compareMatrices(imgDataMatrix) {
-  var matrixUser = math.matrix(imgDataMatrix),
-      matrixDigit,
-      comparisonMatrices = [],
-      compareMatrix,
-      count = 0;
+      if( data == null )
+      {
+        alert("You must draw something first.");
+      }
+      else
+      {
+        var charEntered = prompt("What did you just draw?", "");
 
-  for(var n=0; n<patterns.length; n++) {
-    matrixDigit = math.matrix(patterns[n]);
-    matrixDigit = math.multiply(matrixDigit, -1);
+        if( charEntered )
+        {
+          if( charEntered in charData )
+          {
+            alert("That character is already defined.");
+          }
+          else if( charEntered.length!=1 )
+          {
+            alert("Please enter exactly one character.");
+          }
+          else
+          {
+            drawingArea.clear();
+            charData[charEntered] = data;
+            lstLetters.add(new Option(charEntered));
+            clearDownSample();
+          }
+        }
+      }
+    }
 
-    compareMatrix = math.add(matrixUser, matrixDigit);
+    // Called when the "Remove" button is clicked.
+    function ev_remove(ev)
+    {
+      for (var i = lstLetters.length - 1; i>=0; i--) {
+        if (lstLetters.options[i].selected) {
+          lstLetters.remove(i);
+        }
+      }
+      clearDownSample();
+    }
 
-    var cum = compareMatrix.map(function (value, index, compareMatrix) {
-      count +=  Math.abs(value);
-    });
+    // Called when the "Downsample" button is clicked
+    function ev_downSample(ev)
+    {
+      downSampleData = drawingArea.performDownSample();
+      displaySample();
+    }
 
-    comparisonMatrices[n] = count;
+    // Called when the "Clear" button is clicked
+    function ev_clear(ev)
+    {
+      drawingArea.clear();
+      clearDownSample();
+    }
 
-    count = 0;
-  }
+    // Called when the selected letter changes
+    function ev_selectList (ev)
+    {
+      var c = lstLetters.options[lstLetters.selectedIndex].text;
+      downSampleData = charData[c];
+      displaySample();
+    }
 
-  return comparisonMatrices;
-}
+    // Called when the "Recognize" button is clicked
+    function ev_recognize (ev)
+    {
+      downSampleData = drawingArea.performDownSample();
+      displaySample();
+      if( lstLetters.length<1 )
+      {
+        alert("Please teach me something first.");
+      }
+      else if( downSampleData == null )
+      {
+        alert("You must draw something to recognize.");
+      }
+      else
+      {
+        var bestChar = '??';
+        var bestScore = 0;
 
+        for(var c in charData )
+        {
+          var data = charData[c];
 
-function make_base()
-{
-  base_image = new Image();
-  base_image.src = 'img/test_six_4.png';
-  base_image.onload = function(){
-    ctx.drawImage(base_image, 0, 0);
+// Now we will actually recognize the letter drawn.
+// To do this, we will use a Euclidean distance
+// http://www.heatonresearch.com/wiki/Euclidean_Distance
 
-    imgData = ctx.getImageData(0, 0, base_image.width, base_image.height);
-    imgDataBW = convertToBW(imgData);
-    imgDataMatrix = listToMatrix(imgDataSerialized, imgWidth);
+          var sum = 0;
+          for(var i = 0; i<data.length; i++ )
+          {
+            var delta = data[i] - downSampleData[i];
+            sum = sum + (delta*delta);
+          }
 
-    comparisonMatricesArray = compareMatrices(imgDataMatrix);
-    estimatedNumber = comparisonMatricesArray.indexOf(Math.min.apply(Math, comparisonMatricesArray));
+          sum = Math.sqrt(sum);
 
-    console.log("Estimated Number:", estimatedNumber);
+// Basically we are calculating the Euclidean distance between
+// what was just drawn, and each of the samples we taught
+// the program.  The smallest Euclidean distance is the char.
 
-    ctx.putImageData(imgDataBW,0,0);
-  }
+          if( sum<bestScore || bestChar=='??' )
+          {
+            bestScore = sum;
+            bestChar = c;
+          }
 
-}
+        }
+
+        alert('I believe you typed: ' + bestChar );
+      }
+
+      drawingArea.clear();
+      clearDownSample();
+    }
+
+    function clearDownSample() {
+      downSampleData = ENCOG.ArrayUtil.allocate1D(DOWNSAMPLE_WIDTH*DOWNSAMPLE_HEIGHT);
+      ENCOG.ArrayUtil.fillArray(downSampleData,0,downSampleData.length,-1);
+      displaySample();
+    }
+
+    // Preload the digits, so that the user can quickly do some OCR if desired.
+    function preload()
+    {
+      defineChar("0", new Array( -1,1,1,1,-1,1,1,-1,1,1,1,-1,-1,-1,1,1,-1,-1,-1,1,1,-1,-1,-1,1,1,-1,-1,-1,1,1,1,-1,-1,1,-1,1,1,1,-1 ) );
+      defineChar("1", new Array( 1,1,1,-1,-1,1,1,1,-1,-1,1,1,1,-1,-1,1,1,1,1,-1,-1,1,1,1,1,-1,-1,-1,1,1,-1,-1,-1,1,1,-1,1,1,1,1) );
+      defineChar("2", new Array(1,1,1,-1,-1,-1,-1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,1,1,1,1,-1,1,-1,1,1,-1,1,1,1,1,1) );
+      defineChar("3", new Array(1,1,1,1,-1,-1,-1,-1,1,1,-1,-1,-1,1,1,-1,-1,1,1,-1,-1,1,1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,1,1,1,1,1) );
+      defineChar("4", new Array(1,-1,-1,1,-1,1,-1,-1,1,-1,1,-1,-1,1,-1,1,1,1,1,1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1) );
+      defineChar("5", new Array(1,1,1,1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,1,1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,1,1,1,1,1) );
+      defineChar("6", new Array(-1,1,1,1,-1,1,1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,1,1,-1,1,1,1,1,1,1,1,-1,-1,1,1,1,-1,-1,1,-1,1,1,1,1) );
+      defineChar("7", new Array(1,1,1,1,1,-1,-1,-1,1,1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,1,1,-1,-1,-1,1,-1,-1,-1,1,1,-1,-1,-1,1,-1,-1,-1) );
+      defineChar("8", new Array(1,1,1,1,1,1,-1,-1,-1,1,1,-1,-1,-1,1,1,1,1,1,1,-1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,-1,1,1,1,1,1,1) );
+      defineChar("9", new Array(1,1,1,1,1,1,1,-1,-1,1,1,-1,-1,-1,1,1,1,1,1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1,-1,-1,-1,-1,1) );
+    }
+
+    // Define a character, add it to the list and to the map.
+    function defineChar(charEntered,data)
+    {
+      charData[charEntered] = data;
+      lstLetters.add(new Option(charEntered));
+    }
+
+    // Display downsampled data to the grid.
+    function displaySample()
+    {
+      downsampleArea.render();
+    }
+
+    // cause the init function to be called.
+    init();
+
+  }, false); }

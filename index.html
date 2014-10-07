@@ -4,15 +4,22 @@
   <meta charset="UTF-8">
   <title></title>
   <link rel="stylesheet" href="css/style.css"/>
-
-
-
 </head>
 <body>
-  <canvas id="viewport" width="18" height="20"></canvas>
 
-  <script src="js/vendor/math.js"></script>
-  <script src="js/patterns.js"></script>
+  <div id="example-holder">
+    <div id="drawing-area"></div>
+    <select id="lstLetters" size="10"></select><div id="example-btn1"><input id="btnRecognize" type="button" value="Recognize" /><input id="btnTeach" type="button" value="Teach" /><input id="btnClear" type="button" value="Clear" /><input id="btnDownsample" type="button" value="Down Sample" /><input id="btnRemove" type="button" value="Remove" /></div>
+    <p>
+    </p><div id="downsampleView"></div>
+
+  </div>
+
+
+  <script src="js/vendor/encog-js-1.0.js"></script>
+  <script src="js/vendor/encog-widget-1.0.js"></script>
+
   <script src="js/script.js"></script>
+
 </body>
 </html>
